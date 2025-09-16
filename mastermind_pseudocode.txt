@@ -1,0 +1,211 @@
+MASTERMIND - PSEUDOCODE (BEGINNER STYLE)
+
+CONSTANTS AND GLOBALS
+- MAXATTEMPT = 10
+- SAVE_FILE = "mastermind_save.txt"
+
+STRUCT GameState
+- secretCode : string
+- codeLength : int (default 4)
+- allowRepeat : bool (default false)
+- cheat : bool (default false)
+- maxAttempts : int (default MAXATTEMPT)
+- attemptsUsed : int (default 0)
+- userVsUser : bool (default false)
+- accumulatedSeconds : int (default 0)
+- inProgress : bool (default false)
+- startTime : time_t
+
+FUNCTION WelcomeMessage()
+- print the game banner
+
+FUNCTION PrintRules(codeLength)
+- print basic rules
+- show code length and max attempts
+
+FUNCTION ShowMainMenu(cheatDefault)
+- print menu options 1..4
+- print cheat state as ON or OFF
+- ask for choice (no input validation here)
+
+FUNCTION GenerateRandomCode(length, allowRepeat) RETURNS string
+- code = empty string
+- seed random with current time
+- create used[7] as array of bool, all false (for digits 1..6)
+- repeat i from 0 to length-1
+  - if allowRepeat is true
+    - d = random number between 1 and 6
+  - else
+    - try random numbers until an unused digit found (limit tries)
+    - if still used, pick first free digit
+    - mark used[d] = true
+  - append character ('0' + d) to code
+- return code
+
+FUNCTION ValidateCodeOrGuess(s, length, allowRepeat) RETURNS bool
+- size = length of s
+- if size != length then return false
+- create seen[7] as array of bool, all false
+- repeat i from 0 to size-1
+  - c = s[i]
+  - if c not between '1' and '6' then return false
+  - d = c - '0'
+  - if allowRepeat is false
+    - if seen[d] is true then return false
+    - set seen[d] = true
+- return true
+
+FUNCTION GetFeedback(secret, guess, OUT red, OUT white)
+- n = length of secret
+- set red = 0, white = 0
+- create countSecret[7] and countGuess[7] as int arrays, all zeros
+- repeat i from 0 to n-1
+  - if secret[i] == guess[i]
+    - red = red + 1
+  - else
+    - countSecret[secret[i] - '0'] = countSecret[secret[i] - '0'] + 1
+    - countGuess[guess[i] - '0'] = countGuess[guess[i] - '0'] + 1
+- repeat d from 1 to 6
+  - if countSecret[d] < countGuess[d]
+    - white = white + countSecret[d]
+  - else
+    - white = white + countGuess[d]
+
+FUNCTION SaveGame(gs)
+- open SAVE_FILE for writing
+- if open fails then print error and return
+- write version number 1
+- write gs.codeLength
+- write 1 or 0 for gs.allowRepeat
+- write 1 or 0 for gs.cheat
+- write gs.maxAttempts
+- write gs.attemptsUsed
+- write 1 or 0 for gs.userVsUser
+- write gs.accumulatedSeconds
+- write gs.secretCode
+- close file
+- print success message
+
+FUNCTION LoadGame(OUT gs) RETURNS bool
+- open SAVE_FILE for reading
+- if open fails then print and return false
+- read version; if not 1 then print and return false
+- read into gs.codeLength
+- read allow (int), cheat (int), user (int)
+- read gs.maxAttempts, gs.attemptsUsed, gs.accumulatedSeconds, gs.secretCode
+- if any read fails then print and return false
+- set gs.allowRepeat based on allow (1 = true, else false)
+- set gs.cheat based on cheat (1 = true, else false)
+- set gs.userVsUser based on user (1 = true, else false)
+- set gs.inProgress = true
+- set gs.startTime = current time
+- print loaded message
+- return true
+
+FUNCTION DifficultyName(len, allowRepeat) RETURNS string
+- if len == 3 return "Easy"
+- if len == 4 return "Medium"
+- if len == 5
+  - if allowRepeat return "Hard (repeats)"
+  - else return "Hard"
+- otherwise return "Custom"
+
+FUNCTION PlayGame(gs)
+- set gs.inProgress = true
+- set gs.startTime = current time
+- print rules and settings (difficulty, mode, attempts)
+- set won = false
+- while gs.attemptsUsed < gs.maxAttempts
+  - if gs.cheat is true then print the secret code
+  - prompt for guess (or 'save', 'cheat', 'quit')
+  - read guess
+  - if guess == "save"
+    - now = current time
+    - if now >= gs.startTime then
+      - gs.accumulatedSeconds = gs.accumulatedSeconds + (now - gs.startTime)
+    - SaveGame(gs)
+    - print message and return (go back to menu)
+  - if guess == "cheat"
+    - toggle gs.cheat
+    - print cheat state
+    - continue loop
+  - if guess == "quit"
+    - print message and return (go back to menu)
+  - if ValidateCodeOrGuess(guess, gs.codeLength, gs.allowRepeat) is false
+    - print invalid message and continue loop
+  - gs.attemptsUsed = gs.attemptsUsed + 1
+  - call GetFeedback(gs.secretCode, guess, red, white)
+  - print red and white counts
+  - if red == gs.codeLength
+    - now = current time
+    - totalSeconds = gs.accumulatedSeconds
+    - if now >= gs.startTime then
+      - totalSeconds = totalSeconds + (now - gs.startTime)
+    - print win message, attempts used, and time taken
+    - won = true
+    - gs.inProgress = false
+    - break loop
+  - else
+    - print attempts left
+- if won is false and attempts used >= max attempts
+  - print lose message and reveal code
+  - set gs.inProgress = false
+
+FUNCTION NewGame(cheatDefault)
+- create gs
+- set gs.cheat = cheatDefault
+- set gs.maxAttempts = MAXATTEMPT
+- ask for difficulty 1/2/3
+  - if 1 then codeLength=3 and allowRepeat=false
+  - else if 2 then codeLength=4 and allowRepeat=false
+  - else codeLength=5 and allowRepeat=true
+- ask for mode 1/2
+  - if 2 then userVsUser=true else false
+- if userVsUser is true
+  - ask for secret code
+  - while code invalid, ask again
+  - set gs.secretCode = code
+  - print many newlines (hide code)
+- else
+  - gs.secretCode = GenerateRandomCode(gs.codeLength, gs.allowRepeat)
+- repeat forever
+  - set gs.attemptsUsed = 0
+  - set gs.accumulatedSeconds = 0
+  - PlayGame(gs)
+  - if gs.inProgress is true then break (return to menu)
+  - ask "Play again with same settings? (y/n)"
+  - if answer != 'y' then break
+  - if userVsUser is true
+    - ask for new secret code and validate
+    - set gs.secretCode = new code
+    - print many newlines
+  - else
+    - gs.secretCode = GenerateRandomCode(gs.codeLength, gs.allowRepeat)
+
+MAIN()
+- cheatDefault = false
+- WelcomeMessage()
+- loop forever
+  - ShowMainMenu(cheatDefault)
+  - read choice
+  - if choice == "1"
+    - NewGame(cheatDefault)
+  - else if choice == "2"
+    - create gs
+    - if LoadGame(gs) is true then PlayGame(gs)
+  - else if choice == "3"
+    - toggle cheatDefault
+    - print new cheat default state
+  - else if choice == "4"
+    - print goodbye and break
+  - else
+    - print invalid choice
+- return success
+
+NOTES (BEGINNER STYLE)
+- No vector; only basic arrays used
+- No chrono; only time_t and time()
+- No ternary operator; only if/else
+- Index-based loops only
+- Time counters use int
+- Simple error messages
