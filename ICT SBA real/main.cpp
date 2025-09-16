@@ -70,8 +70,8 @@ void ShowMainMenu(bool cheatDefault) {
 // If allowRepeat is true, digits can be repeated (like 1123)
 // If allowRepeat is false, all digits must be different (like 1234)
 string GenerateRandomCode(int length, bool allowRepeat) {
-    string code;
-    code.reserve(length);
+    char code[10]; // Array to hold the code (max 10 digits)
+    int codeLength = 0; // How many digits we've added so far
     // Set up random number generator with current time as seed
     srand((unsigned int)time(nullptr));
     bool used[7] = {false, false, false, false, false, false, false}; // Track which digits 1-6 we've used
@@ -82,28 +82,26 @@ string GenerateRandomCode(int length, bool allowRepeat) {
             d = 1 + rand() % 6;
         } else {
             // If no repeats, keep trying until we find an unused digit
-            int tries = 0;
             do {
                 d = 1 + rand() % 6;
-                tries++;
-            } while (used[d] && tries < 50);
-            if (used[d]) {
-                // If we still can't find one, just pick the first available digit
-                for (int k = 1; k <= 6; k++) {
-                    if (!used[k]) { d = k; break; }
-                }
-            }
+            } while (used[d]);
             used[d] = true; // Mark this digit as used
         }
-        code.push_back(char('0' + d)); // Convert number to character and add to code
+        code[codeLength] = '0' + d; // Convert number to character and store in array
+        codeLength++; // Move to next position
     }
-    return code;
+    code[codeLength] = '\0'; // Add null terminator to make it a proper string
+    return string(code); // Convert char array to string
 }
 
 // Checks if a code or guess is valid according to the game rules
 // Returns true if it's valid, false if it's not
 bool ValidateCodeOrGuess(const string &s, int length, bool allowRepeat) {
-    int size = (int)s.size();
+    // Count how many characters are in the string
+    int size = 0;
+    while (s[size] != '\0') { // Count until we reach the end
+        size++;
+    }
     if (size != length) return false; // Wrong length
     bool seen[7] = {false, false, false, false, false, false, false}; // Track which digits we've seen
     for (int i = 0; i < size; i++) {
@@ -122,7 +120,11 @@ bool ValidateCodeOrGuess(const string &s, int length, bool allowRepeat) {
 // red = how many digits are correct AND in the right position
 // white = how many digits are correct but in the wrong position
 void GetFeedback(const string &secret, const string &guess, int &red, int &white) {
-    int n = (int)secret.size();
+    // Count how many characters are in the secret
+    int n = 0;
+    while (secret[n] != '\0') { // Count until we reach the end
+        n++;
+    }
     red = 0;  // Start counting red pegs
     white = 0; // Start counting white pegs
     int countSecret[7] = {0,0,0,0,0,0,0}; // Count how many times each digit appears in secret
