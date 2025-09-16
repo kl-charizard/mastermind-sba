@@ -1,5 +1,3 @@
-MASTERMIND - PSEUDOCODE (BEGINNER STYLE)
-
 CONSTANTS AND GLOBALS
 - MAXATTEMPT = 10
 - SAVE_FILE = "mastermind_save.txt"
@@ -201,11 +199,3 @@ MAIN()
   - else
     - print invalid choice
 - return success
-
-NOTES (BEGINNER STYLE)
-- No vector; only basic arrays used
-- No chrono; only time_t and time()
-- No ternary operator; only if/else
-- Index-based loops only
-- Time counters use int
-- Simple error messages
